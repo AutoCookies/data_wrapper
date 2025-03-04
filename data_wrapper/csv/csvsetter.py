@@ -1,4 +1,3 @@
-import csv
 import logging
 from .csvgetter import CSVGetter
 
@@ -22,22 +21,4 @@ class CSVSetter(CSVGetter):
         for row, value in zip(self.data, values):
             row[column_name] = value
 
-    def to_csv(self, filename):
-        """
-        Save the modified data to a new CSV file.
-
-        Args:
-            filename (str): The name of the file to save.
-        """
-        if not self.data:
-            logging.warning("No data to save.")
-            return
-
-        try:
-            with open(filename, mode="w", newline="", encoding="utf-8") as file:
-                writer = csv.DictWriter(file, fieldnames=self.data[0].keys())
-                writer.writeheader()
-                writer.writerows(self.data)
-            logging.info(f"Data successfully saved to {filename}")
-        except Exception as e:
-            logging.error(f"Failed to save CSV: {e}")
+    

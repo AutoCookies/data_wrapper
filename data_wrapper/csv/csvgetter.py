@@ -1,6 +1,5 @@
 import logging
 from .csvloader import CSVLoader
-from tabulate import tabulate
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -86,17 +85,17 @@ class CSVGetter(CSVLoader):
             column_name (str): The name of the column.
 
         Returns:
-            list: List of values in the column with automatic type conversion.
+            CSVColumn: An object that provides functionalities for the column.
         """
         if not self.data:
             logging.warning("No data loaded.")
-            return []
+            return None
         if column_name not in self.data[0]:
             logging.error(f"Column '{column_name}' not found.")
             raise KeyError(f"Column '{column_name}' does not exist.")
 
-        values = [row[column_name] for row in self.data]
-        return [self._convert_value(v) for v in values]
+        return CSVColumn(self.data, column_name)  # Trả về đối tượng CSVColumn
+
 
     def _convert_value(self, value):
         """Convert value to int, float, or keep as string."""
@@ -110,7 +109,7 @@ class CSVGetter(CSVLoader):
 
     def get_head(self, n=5):
         """
-        Returns the first 'n' rows of the data in a table-like format, similar to pandas' df.head().
+        Returns the first 'n' rows of the data in a table-like format.
         
         Args:
             n (int, optional): Number of rows to return. Defaults to 5.
@@ -118,7 +117,7 @@ class CSVGetter(CSVLoader):
         Returns:
             str: A formatted table-like string.
         """
-        return self._format_table(self.data[:n], "First Rows")
+        return self._format_table(self.data[:n])
 
     def get_tail(self, n=5):
         """
@@ -130,7 +129,8 @@ class CSVGetter(CSVLoader):
         Returns:
             str: A formatted table-like string.
         """
-        return self._format_table(self.data[-n:], "Last Rows")
+        return self._format_table(self.data[-n:])
+
 
     def get_row(self, index):
         """
@@ -182,4 +182,21 @@ class CSVGetter(CSVLoader):
         """
         if not rows:
             return "No data available."
-        return f"{title}:\n" + tabulate(rows, headers="keys", tablefmt="grid")
+
+        # Lấy danh sách cột từ dictionary đầu tiên
+        headers = list(rows[0].keys())
+
+        # Tính độ rộng tối đa của mỗi cột
+        column_widths = {col: max(len(col), *(len(str(row[col])) for row in rows)) for col in headers}
+
+        # Tạo dòng tiêu đề
+        header_row = "  ".join(col.ljust(column_widths[col]) for col in headers)
+        separator = " ".join(" " * column_widths[col] for col in headers)
+
+        # Tạo dòng dữ liệu
+        data_rows = "\n".join("   ".join(str(row[col]).ljust(column_widths[col]) for col in headers) for row in rows)
+
+        # Ghép thành bảng hoàn chỉnh
+        table = f"{title}:\n{header_row}\n{separator}\n{data_rows}"
+        
+        return table
