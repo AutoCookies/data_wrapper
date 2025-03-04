@@ -1,3 +1,3 @@
-from .loaders import CSVLoader, CSVGetter
+from .loaders import CSVLoader, CSVGetter, CSVSetter
 
-__all__ = ["CSVLoader", "CSVGetter"]
+__all__ = ["CSVLoader", "CSVGetter", "CSVSetter"]

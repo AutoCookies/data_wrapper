@@ -86,33 +86,69 @@ class CSVGetter(CSVLoader):
             column_name (str): The name of the column.
 
         Returns:
-            CSVColumn: An object representing the column with additional functionalities.
+            list: List of values in the column with automatic type conversion.
         """
         if not self.data:
             logging.warning("No data loaded.")
-            return CSVColumn([], column_name)
+            return []
         if column_name not in self.data[0]:
             logging.error(f"Column '{column_name}' not found.")
             raise KeyError(f"Column '{column_name}' does not exist.")
-        return CSVColumn(self.data, column_name)
+
+        values = [row[column_name] for row in self.data]
+        return [self._convert_value(v) for v in values]
+
+    def _convert_value(self, value):
+        """Convert value to int, float, or keep as string."""
+        try:
+            return int(value)  # Thử ép kiểu sang integer
+        except ValueError:
+            try:
+                return float(value)  # Nếu không phải int, thử ép kiểu sang float
+            except ValueError:
+                return value  # Nếu không phải số, giữ nguyên kiểu string
+
+    def get_head(self, n=5):
+        """
+        Returns the first 'n' rows of the data in a table-like format, similar to pandas' df.head().
+        
+        Args:
+            n (int, optional): Number of rows to return. Defaults to 5.
+
+        Returns:
+            str: A formatted table-like string.
+        """
+        return self._format_table(self.data[:n], "First Rows")
+
+    def get_tail(self, n=5):
+        """
+        Returns the last 'n' rows of the data.
+
+        Args:
+            n (int, optional): Number of rows to return. Defaults to 5.
+
+        Returns:
+            str: A formatted table-like string.
+        """
+        return self._format_table(self.data[-n:], "Last Rows")
 
     def get_row(self, index):
         """
-        Returns a specific row by index.
+        Returns a specific row by index in a formatted table.
 
         Args:
             index (int): The index of the row.
 
         Returns:
-            dict: The row data as a dictionary.
+            str: A formatted string representation of the row.
         """
         if not self.data:
             logging.warning("No data loaded.")
-            return None
+            return "No data available."
         if index < 0 or index >= len(self.data):
             logging.error("Row index out of range.")
-            return None
-        return self.data[index]
+            return "Invalid index."
+        return self._format_table([self.data[index]], f"Row {index}")
 
     def get_value(self, row_index, column_name):
         """
@@ -126,55 +162,24 @@ class CSVGetter(CSVLoader):
             str: The value at the specified row and column.
         """
         row = self.get_row(row_index)
-        if row is None:
+        if row == "Invalid index." or row == "No data available.":
             return None
-        if column_name not in row:
+        if column_name not in self.data[0]:
             logging.error(f"Column '{column_name}' not found.")
             return None
-        return row[column_name]
+        return self._convert_value(self.data[row_index][column_name])
 
-    def get_head(self, n=5):
+    def _format_table(self, rows, title):
         """
-        Returns the first 'n' rows of the data in a table-like format, similar to pandas' df.head().
-        
+        Helper function to format a list of dictionaries into a table.
+
         Args:
-            n (int, optional): Number of rows to return. Defaults to 5.
+            rows (list[dict]): The list of dictionaries representing rows.
+            title (str): The title for the table.
 
         Returns:
-            str: A formatted table-like string.
+            str: Formatted table string.
         """
-        if not self.data:
-            logging.warning("No data loaded.")
+        if not rows:
             return "No data available."
-
-        head_data = self.data[:n]
-        
-        # Nếu có tabulate, dùng nó để hiển thị đẹp hơn
-        if "tabulate" in globals():
-            return tabulate(head_data, headers="keys", tablefmt="grid")  # Kiểu hiển thị giống pandas
-        else:
-            # Nếu không có tabulate, format thủ công
-            headers = self.columns
-            rows = [[row[col] for col in headers] for row in head_data]
-            
-            # Tạo header row
-            header_row = " | ".join(headers)
-            separator = "-" * len(header_row)
-            data_rows = "\n".join([" | ".join(map(str, row)) for row in rows])
-
-            return f"{header_row}\n{separator}\n{data_rows}"
-    
-    def get_tail(self, n=5):
-        """
-        Returns the last 'n' rows of the data.
-
-        Args:
-            n (int, optional): Number of rows to return. Defaults to 5.
-
-        Returns:
-            list[dict]: A list of dictionaries containing the last 'n' rows.
-        """
-        if not self.data:
-            logging.warning("No data loaded.")
-            return []
-        return self.data[-n:]
+        return f"{title}:\n" + tabulate(rows, headers="keys", tablefmt="grid")
