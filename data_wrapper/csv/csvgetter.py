@@ -1,5 +1,7 @@
 import logging
 from .csvloader import CSVLoader
+import os
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -51,6 +53,7 @@ class CSVColumn:
         float32_min, float32_max = -3.4e38, 3.4e38  # Giới hạn gần đúng của float32
 
         types = set()
+        datetime_formats = ["%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%d-%m-%Y %H:%M:%S"]
 
         for v in values:
             if isinstance(v, int):
@@ -64,12 +67,25 @@ class CSVColumn:
                 else:
                     types.add("float64")
             elif isinstance(v, str):
-                types.add("str")
+                is_datetime = False
+                for fmt in datetime_formats:
+                    try:
+                        datetime.strptime(v, fmt)
+                        types.add("datetime")
+                        is_datetime = True
+                        break
+                    except ValueError:
+                        continue
+                if not is_datetime:
+                    types.add("str")
+            elif isinstance(v, datetime):
+                types.add("datetime")
             else:
-                types.add("object")  # Trường hợp giá trị không thuộc kiểu nào
+                types.add("object")  # Giá trị không thuộc kiểu nào khác
 
         if len(types) == 1:
             return types.pop()  # Trả về kiểu dữ liệu duy nhất nếu có
+        return types  # Trả về tập hợp kiểu dữ liệu nếu có nhiều loại
 
 
 class CSVGetter(CSVLoader):
@@ -169,7 +185,7 @@ class CSVGetter(CSVLoader):
             return None
         return self._convert_value(self.data[row_index][column_name])
 
-    def _format_table(self, rows, title):
+    def _format_table(self, rows):
         """
         Helper function to format a list of dictionaries into a table.
 
@@ -197,6 +213,70 @@ class CSVGetter(CSVLoader):
         data_rows = "\n".join("   ".join(str(row[col]).ljust(column_widths[col]) for col in headers) for row in rows)
 
         # Ghép thành bảng hoàn chỉnh
-        table = f"{title}:\n{header_row}\n{separator}\n{data_rows}"
+        table = f"{header_row}\n{separator}\n{data_rows}"
         
         return table
+    
+    def get_info(self):
+        """
+        Returns information about the CSV file, including column names, data types, and file size.
+
+        Returns:
+            str: A formatted string containing the information.
+        """
+        if not self.data:
+            logging.warning("No data loaded.")
+            return "No data available."
+
+        # Lấy thông tin về các cột
+        column_info = []
+        for column_name in self.data[0].keys():
+            column = self[column_name]  # Sử dụng __getitem__ để lấy đối tượng CSVColumn
+            dtype = column.get_dtype()  # Lấy kiểu dữ liệu của cột
+            column_info.append((column_name, dtype))
+
+        # Lấy dung lượng file
+        file_size = self._get_file_size()
+
+        # Định dạng thông tin
+        info_str = "CSV File Information:\n"
+        info_str += "-" * 50 + "\n"
+        info_str += "Columns:\n"
+
+        # Tính độ rộng tối đa của tên cột và kiểu dữ liệu
+        max_col_name_width = max(len(col_name) for col_name, _ in column_info)
+        max_dtype_width = max(len(str(dtype)) for _, dtype in column_info)
+
+        # Định dạng từng dòng thông tin
+        for col_name, col_type in column_info:
+            # Căn chỉnh tên cột và kiểu dữ liệu với khoảng cách nhất định
+            info_str += f"  {col_name.ljust(max_col_name_width)} : {str(col_type).ljust(max_dtype_width)}\n"
+
+        info_str += "-" * 50 + "\n"
+        info_str += f"File Size: {file_size}\n"
+
+        return info_str
+
+    def _get_file_size(self):
+        """
+        Helper function to get the size of the CSV file.
+
+        Returns:
+            str: The file size in a human-readable format.
+        """
+        if not hasattr(self, 'csv_path') or not self.csv_path:
+            return "File size not available (file path not provided)."
+
+        try:
+            size_bytes = os.path.getsize(self.csv_path)
+            # Chuyển đổi dung lượng sang định dạng dễ đọc (KB, MB, GB)
+            if size_bytes < 1024:
+                return f"{size_bytes} bytes"
+            elif size_bytes < 1024 * 1024:
+                return f"{size_bytes / 1024:.2f} KB"
+            elif size_bytes < 1024 * 1024 * 1024:
+                return f"{size_bytes / (1024 * 1024):.2f} MB"
+            else:
+                return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+        except FileNotFoundError:
+            return "File size not available (file not found)."
