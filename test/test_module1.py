@@ -7,5 +7,5 @@ from data_wrapper import CSVExporter as csv
 
 csv_path = "D:\\Github Projects\\data_wrapper\\test\\test_data\\train.csv"
 data = csv.from_csv(csv_path)
-print(data['rainfall'].get_unique())
+print(data.get_head(3))
 data.to_xml("train")
