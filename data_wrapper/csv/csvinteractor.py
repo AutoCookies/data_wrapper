@@ -122,3 +122,46 @@ class CSVInteractor (CSVAggregator):
 
         logging.info(f"Grouped data by '{group_column}' with '{agg_func}' function.")
         return result
+    
+    def reshape(self, id_vars, value_vars, var_name="variable", value_name="value"):
+        """
+        Reshapes the CSV data from wide to long format.
+
+        Args:
+            id_vars (list): Columns to use as identifier variables.
+            value_vars (list): Columns to unpivot (reshape) into a single column.
+            var_name (str): Name of the new column that will contain the variable names.
+            value_name (str): Name of the new column that will contain the values.
+
+        Returns:
+            list: A list of reshaped rows.
+        """
+        if not isinstance(id_vars, list) or not isinstance(value_vars, list):
+            logging.error("id_vars and value_vars must be lists.")
+            return []
+        
+        if not id_vars or len(id_vars) == 0:
+            logging.error("require id_vars but got empty")
+        else:
+            logging.error("Require value_vars but got empty")
+
+        # Kiểm tra xem các cột có tồn tại không
+        for col in id_vars + value_vars:
+            if col not in self.columns:
+                logging.error(f"Column '{col}' not found.")
+                return []
+
+        reshaped_data = []
+        for row in self.data:
+            for value_col in value_vars:
+                reshaped_row = {col: row[col] for col in id_vars}
+                reshaped_row[var_name] = value_col
+                reshaped_row[value_name] = row[value_col]
+                reshaped_data.append(reshaped_row)
+
+        # Cập nhật danh sách cột
+        self.columns = id_vars + [var_name, value_name]
+        self.data = reshaped_data
+
+        logging.info(f"Reshaped data from wide to long format.")
+        return reshaped_data
