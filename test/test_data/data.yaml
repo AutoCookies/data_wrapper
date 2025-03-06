@@ -1,0 +1,16 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 2
+names: ['Fire', 'Smoke']
+
+dataset_info:
+  categories:
+    Only fire: 1164
+    Only smoke: 5867
+    Fire and smoke: 4658
+    None: 9838
+  bounding_boxes:
+    Fire: 14692
+    Smoke: 11865
