@@ -9,13 +9,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from data_wrapper.tensorflow_wrap.data_splitter import data_split
 
 # Kiểm tra đường dẫn CSV
-csv_path = "D:\\Github Projects\\data_wrapper\\test\\test_data\\test.csv"
-
-if not os.path.exists(csv_path):
-    raise FileNotFoundError(f"File {csv_path} không tồn tại.")
-
+csv_path = "D:\\Github Projects\\data_wrapper\\test\\test_data\\train.csv"
 df = pd.read_csv(csv_path)
-df_train, df_test = data_split(df)
-
-print(df_train.shape)
-print(df_test.shape)
+print(df.head())
