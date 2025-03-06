@@ -3,8 +3,14 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from data_wrapper import CSVExporter as csv
+import data_wrapper as dw
 
-csv_path = "D:\\Github Projects\\data_wrapper\\test\\test_data\\train.csv"
-data = csv.from_csv(csv_path)
-print(data.get_info())
+csv_path = "D:\\Github Projects\\data_wrapper\\test\\test_data\\test.json"
+df = dw.read_json(csv_path)
+# print(df.show_head())
+# print(df.info())
+# print(df.describe())
+# print(df.show_tail())
+
+df = df.drop(columns = ["age"])
+print(df.show_head())
